@@ -1,25 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/wait.h>
-int main(void) {
-    int link[2];
-    pipe(link);
-    char foo[4096];
-    pid_t child_pid = fork();
-    char *argv[2] = {"1","10"};
-    if (child_pid >= 0) {
-        if (child_pid == 0) {
-        dup2(link[1],STDOUT_FILENO);
-        execv("sequential_min_max",argv);
-        }
-        else {
-            close(link[1]);
-            int nbytes = read(link[0], foo, sizeof(foo));
-            printf("Output:\n%.*s\n", nbytes, foo);
-            wait(NULL);
+
+int main() {
+    pid_t pid = fork();
+
+    if (pid == -1) {
+        perror("fork");
+        return 1;
+    }
+
+    if (pid == 0) {
+        // Это код, который будет выполняться в дочернем процессе
+        char *args[] = {"./sequential_min_max", "123", "1000", NULL};
+        execvp(args[0], args);
+        perror("execvp");
+        return 1;
+    } else {
+        // Это код родительского процесса
+        int status;
+        waitpid(pid, &status, 0);
+        if (WIFEXITED(status)) {
+            printf("Child process exited with status %d\n", WEXITSTATUS(status));
         }
     }
 
